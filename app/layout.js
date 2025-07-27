@@ -13,9 +13,8 @@ const playfair = Playfair_Display({
 })
 
 export const metadata = {
-  title: "CruiseEase",
+  title: "Cruise-Ease Management System",
   description: "Luxury cruise ship management and booking system",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({ children }) {
