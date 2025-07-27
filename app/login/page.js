@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { signIn, getSession } from "next-auth/react"
+import { useState, useEffect } from "react"
+import { signIn, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Navbar from "@/components/Navbar"
@@ -13,6 +13,14 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { data: session, status } = useSession()
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.role) {
+      router.replace(`/dashboard/${session.user.role}`)
+    }
+  }, [session, status, router])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -27,18 +35,37 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        setError("Invalid credentials")
+        setError("Invalid email or password")
+        setLoading(false)
+      } else if (result?.ok) {
+        // Successful login - force page refresh to ensure session is loaded
+        window.location.href = "/dashboard/voyager" // Default to voyager, will redirect based on actual role
       } else {
-        const session = await getSession()
-        if (session?.user?.role) {
-          router.push(`/dashboard/${session.user.role}`)
-        }
+        setError("Login failed. Please try again.")
+        setLoading(false)
       }
     } catch (error) {
+      console.error("Login error:", error)
       setError("An error occurred. Please try again.")
-    } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading if checking session
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-ocean-blue to-navy">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+          <div className="text-white text-xl">Loading...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't show login form if already authenticated
+  if (status === "authenticated") {
+    return null
   }
 
   return (
@@ -66,6 +93,7 @@ export default function LoginPage() {
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-ocean-blue focus:border-transparent"
                     placeholder="Enter your email"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -81,12 +109,15 @@ export default function LoginPage() {
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-ocean-blue focus:border-transparent"
                     placeholder="Enter your password"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl">{error}</div>
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm">
+                  {error}
+                </div>
               )}
 
               <button type="submit" disabled={loading} className="w-full btn-primary">

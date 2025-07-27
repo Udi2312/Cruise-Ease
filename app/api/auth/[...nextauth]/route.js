@@ -17,53 +17,65 @@ export const authOptions = {   // ✅ export authOptions separately
           return null
         }
 
-        await dbConnect()
+        try {
+          await dbConnect()
 
-        const user = await User.findOne({ email: credentials.email })
+          const user = await User.findOne({ email: credentials.email })
 
-        if (!user) {
+          if (!user) {
+            return null
+          }
+
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+
+          if (!isPasswordValid) {
+            return null
+          }
+
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          }
+        } catch (error) {
+          console.error("Auth error:", error)
           return null
-        }
-
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
-
-        if (!isPasswordValid) {
-          return null
-        }
-
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-          role: user.role,
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user }) {
       if (user) {
         token.role = user.role
         token.id = user.id 
-        token.sessionId = `${user.id}-${Date.now()}-${Math.random()}`
+        //  token.sessionId = `${user.id}-${Date.now()}-${Math.random().toString(36).substring(2)}`
       }
-      if (trigger === "update" && session) {
-        token.name = session.name
-        token.email = session.email
-      }
+      // if (trigger === "update" && session) {
+      //   token.name = session.name
+      //   token.email = session.email
+      // }
       return token
     },
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id || token.sub    // ✅ attaches userId
         session.user.role = token.role  // ✅ attaches role
-        session.sessionId = token.sessionId
+        // session.sessionId = token.sessionId
       }
       return session
+    },
+     async redirect({ url, baseUrl }) {
+      // Handle redirects properly
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+     else if (new URL(url).origin === baseUrl) return url
+      return baseUrl
     },
   },
   pages: {
     signIn: "/login",
+    error: "/login",
   },
   session: {
     strategy: "jwt",
@@ -73,40 +85,41 @@ export const authOptions = {   // ✅ export authOptions separately
   jwt: {
     maxAge: 24 * 60 * 60, // 24 hours
   },
-   cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        domain: process.env.NODE_ENV === "production" ? undefined : "localhost",
-      },
-    },
-    callbackUrl: {
-      name: `next-auth.callback-url`,
-      options: {
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        domain: process.env.NODE_ENV === "production" ? undefined : "localhost",
-      },
-    },
-    csrfToken: {
-      name: `next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        domain: process.env.NODE_ENV === "production" ? undefined : "localhost",
-      },
-    },
-  },
+  //  cookies: {
+  //   sessionToken: {
+  //    name: process.env.NODE_ENV === "production" ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+  //     options: {
+  //       httpOnly: true,
+  //       sameSite: "lax",
+  //       path: "/",
+  //       secure: process.env.NODE_ENV === "production",
+  //       domain: process.env.NODE_ENV === "production" ? undefined : "localhost",
+  //     },
+  //   },
+  //   callbackUrl: {
+  //     name: process.env.NODE_ENV === "production" ? "__Secure-next-auth.callback-url" : "next-auth.callback-url",
+  //     options: {
+  //       sameSite: "lax",
+  //       path: "/",
+  //       secure: process.env.NODE_ENV === "production",
+        
+  //     },
+  //   },
+  //   csrfToken: {
+  //     name: process.env.NODE_ENV === "production" ? "__Host-next-auth.csrf-token" : "next-auth.csrf-token",
+  //     options: {
+  //       httpOnly: true,
+  //       sameSite: "lax",
+  //       path: "/",
+  //       secure: process.env.NODE_ENV === "production",
+       
+  //     },
+  //   },
+  // },
     secret: process.env.NEXTAUTH_SECRET,
      debug: process.env.NODE_ENV === "development",
+     trustHost: true,
 }
 
 const handler = NextAuth(authOptions)
-export { handler as GET, handler as POST }
+export { handler as GET, handler as POST, }

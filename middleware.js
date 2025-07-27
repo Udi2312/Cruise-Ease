@@ -1,30 +1,51 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { withAuth } from "next-auth/middleware"
 
 export default withAuth(
   function middleware(req) {
-    // Optional: you can add extra middleware logic here later if needed
+    // Additional middleware logic if needed
+    return
   },
   {
     callbacks: {
-      authorized: ({ token }) => {
-        // ✅ If there is a token, user is authenticated
-        return !!token;
+      authorized: ({ token, req }) => {
+        const { pathname } = req.nextUrl
+
+        // Always allow public routes
+        if (pathname === "/" || pathname === "/login" || pathname === "/register") {
+          return true
+        }
+
+        // Always allow NextAuth API routes
+        if (pathname.startsWith("/api/auth")) {
+          return true
+        }
+
+        // For protected routes, require a valid token
+        if (
+          pathname.startsWith("/dashboard") ||
+          pathname.startsWith("/order") ||
+          pathname.startsWith("/booking") ||
+          (pathname.startsWith("/api") && !pathname.startsWith("/api/auth"))
+        ) {
+          return !!token
+        }
+
+        // Allow everything else
+        return true
       },
     },
-    pages: {
-      signIn: "/login", // ✅ Force redirect to /login instead of /api/auth/signin
-    },
-  }
-);
+  },
+)
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/order/:path*",
-    "/booking/:path*",
-    "/api/orders/:path*",
-    "/api/bookings/:path*",
-    "/api/admin/:path*",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api/auth (NextAuth.js)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    "/((?!api/auth|_next/static|_next/image|favicon.ico).*)",
   ],
-};
+}

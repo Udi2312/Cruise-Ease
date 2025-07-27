@@ -31,6 +31,10 @@ const nextConfig = {
             key: "Expires",
             value: "0",
           },
+          {
+            key: "Vary",
+            value: "Cookie",
+          },
         ],
       },
       {
@@ -39,6 +43,10 @@ const nextConfig = {
           {
             key: "Cache-Control",
             value: "no-store, no-cache, must-revalidate, max-age=0",
+          },
+          {
+            key: "Vary",
+            value: "Cookie",
           },
         ],
       },
