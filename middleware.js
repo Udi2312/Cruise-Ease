@@ -1,24 +1,22 @@
-import { withAuth } from "next-auth/middleware"
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    // Add any additional middleware logic here if needed
+    // Optional: you can add extra middleware logic here later if needed
   },
   {
     callbacks: {
-      authorized: ({ token, req }) => {
-        // Allow access to public routes
-        const publicRoutes = ["/login", "/register", "/"]
-        if (publicRoutes.includes(req.nextUrl.pathname)) {
-          return true
-        }
-
-        // Require authentication for protected routes
-        return !!token
+      authorized: ({ token }) => {
+        // ✅ If there is a token, user is authenticated
+        return !!token;
       },
     },
-  },
-)
+    pages: {
+      signIn: "/login", // ✅ Force redirect to /login instead of /api/auth/signin
+    },
+  }
+);
 
 export const config = {
   matcher: [
@@ -29,4 +27,4 @@ export const config = {
     "/api/bookings/:path*",
     "/api/admin/:path*",
   ],
-}
+};
